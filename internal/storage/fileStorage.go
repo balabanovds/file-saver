@@ -4,7 +4,8 @@ import (
 	"log"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+
+	_ "github.com/mattn/go-sqlite3" //nolint:golint
 )
 
 type fileStorage struct {
@@ -18,20 +19,23 @@ func New(filename string) Storage {
 
 func (f *fileStorage) Open() (err error) {
 	f.db, err = sqlx.Connect("sqlite3", f.filename)
+	if err == nil {
+		log.Printf("db connected successfully to %s\n", f.filename)
+	}
 	return
 }
 
 func (f *fileStorage) Close() error {
+	log.Println("closing db")
 	return f.db.Close()
 }
 
-func (f *fileStorage) Create(file *File) error {
-	_, err := f.db.NamedQuery("insert into file (os_name, app_name, size, os_created_at) "+
-		"values (:os_name, :app_name, :size, :os_created_at)", map[string]interface{}{
-		"os_name":       file.OSName,
-		"app_name":      file.AppName,
-		"size":          file.Size,
-		"os_created_at": file.CreatedTime,
+func (f *fileStorage) Create(file File) error {
+	_, err := f.db.NamedExec("insert into files (os_name, app_name, inode) "+
+		"values (:os_name, :app_name, :inode)", map[string]interface{}{
+		"os_name":  file.OSName,
+		"app_name": file.AppName,
+		"inode":    file.Inode,
 	})
 	if err != nil {
 		return err
@@ -39,10 +43,10 @@ func (f *fileStorage) Create(file *File) error {
 	return nil
 }
 
-func (f *fileStorage) Get(osName string) []File {
-	result := []File{}
+func (f *fileStorage) Get(osFileName string, inode uint64) []File {
+	var result []File
 
-	err := f.db.Get(&result, "select * from files where os_name = $1", osName)
+	err := f.db.Select(&result, "select * from files where os_name = $1 and inode = $2", osFileName, inode)
 	if err != nil {
 		log.Printf("db: error %v\n", err)
 	}
@@ -50,11 +54,15 @@ func (f *fileStorage) Get(osName string) []File {
 }
 
 func (f *fileStorage) GetAll() []File {
-	result := []File{}
+	var result []File
 
-	err := f.db.Get(&result, "select * from files")
+	err := f.db.Select(&result, "select * from files")
 	if err != nil {
 		log.Printf("db: error %v\n", err)
 	}
 	return result
+}
+
+func (f *fileStorage) Delete(osFileName string) {
+	_, _ = f.db.Exec("delete from files where os_name = $1", osFileName)
 }

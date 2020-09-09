@@ -4,9 +4,7 @@ create table files (
    id integer primary key autoincrement unique ,
    os_name text,
    app_name text,
-   size integer,
-   os_created_at timestamp,
-   created_at timestamp default current_timestamp
+   inode integer
 );
 
 -- +goose Down

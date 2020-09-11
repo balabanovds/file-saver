@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/balabanovds/file-saver/internal/app"
@@ -34,10 +35,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	dbFileAbs, err := filepath.Abs(dbFile)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	st := storage.New(dbFile)
+	st := storage.New(dbFileAbs)
 	defer func() {
 		if err := st.Close(); err != nil {
 			log.Printf("db close error: %v\n", err)

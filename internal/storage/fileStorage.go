@@ -43,20 +43,10 @@ func (f *fileStorage) Create(file File) error {
 	return nil
 }
 
-func (f *fileStorage) Get(osFileName string, inode uint64) []File {
-	var result []File
+func (f *fileStorage) Count(osFileName string, inode uint64) int {
+	var result int
 
-	err := f.db.Select(&result, "select * from files where os_name = $1 and inode = $2", osFileName, inode)
-	if err != nil {
-		log.Printf("db: error %v\n", err)
-	}
-	return result
-}
-
-func (f *fileStorage) GetAll() []File {
-	var result []File
-
-	err := f.db.Select(&result, "select * from files")
+	err := f.db.Get(&result, "select count(*) from files where os_name = $1 and inode = $2", osFileName, inode)
 	if err != nil {
 		log.Printf("db: error %v\n", err)
 	}

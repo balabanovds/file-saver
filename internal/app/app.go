@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log"
 	"os"
@@ -56,44 +55,38 @@ func (a *App) processFiles(t time.Time) error {
 		appFileName := t.Format(layoutISO) + "_" + info.Name()
 		file := storage.NewFile(info.Name(), appFileName, statT.Ino)
 
-		filesFound := a.st.Get(info.Name(), statT.Ino)
-		if len(filesFound) == 0 {
-			log.Printf("found new file %s; ino %d;\n", info.Name(), statT.Ino)
-			if err := a.st.Create(file); err != nil {
-				return err
-			}
-
-			fromAbs, err := filepath.Abs(a.fromDir)
-			if err != nil {
-				return err
-			}
-
-			toAbs, err := filepath.Abs(a.toDir)
-			if err != nil {
-				return err
-			}
-
-			from := filepath.Join(fromAbs, info.Name())
-			to := filepath.Join(toAbs, appFileName)
-
-			if err := copyFile(from, to); err != nil {
-				log.Printf("failed to copy file: %v\n", err)
-				a.st.Delete(info.Name())
-				return err
-			}
-			log.Printf("file %s copied to %s\n", from, to)
-
+		filesFound := a.st.Count(info.Name(), statT.Ino)
+		if filesFound != 0 {
+			log.Printf("file %s already in DB\n", info.Name())
 			return nil
 		}
 
-		for _, ff := range filesFound {
-			if ff.Match(file) {
-				log.Printf("file %s already in DB\n", info.Name())
-				return nil
-			}
+		log.Printf("found new file %s; ino %d;\n", info.Name(), statT.Ino)
+		if err := a.st.Create(file); err != nil {
+			return err
 		}
 
-		return errors.New("smth gonna weird")
+		fromAbs, err := filepath.Abs(a.fromDir)
+		if err != nil {
+			return err
+		}
+
+		toAbs, err := filepath.Abs(a.toDir)
+		if err != nil {
+			return err
+		}
+
+		from := filepath.Join(fromAbs, info.Name())
+		to := filepath.Join(toAbs, appFileName)
+
+		if err := copyFile(from, to); err != nil {
+			log.Printf("failed to copy file: %v\n", err)
+			a.st.Delete(info.Name())
+			return err
+		}
+		log.Printf("file %s copied to %s\n", from, to)
+
+		return nil
 	})
 }
 

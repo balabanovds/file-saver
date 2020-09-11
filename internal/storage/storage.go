@@ -8,7 +8,6 @@ type Storage interface {
 
 type FileStorage interface {
 	Create(file File) error
-	Get(osFileName string, inode uint64) []File
-	GetAll() []File
+	Count(osFileName string, inode uint64) int
 	Delete(osFileName string)
 }
